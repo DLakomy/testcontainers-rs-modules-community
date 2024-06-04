@@ -78,6 +78,8 @@ impl Image for Oracle {
 
 #[cfg(test)]
 mod tests {
+    use std::time::{Duration, Instant};
+
     use super::*;
     use crate::testcontainers::runners::SyncRunner;
 
@@ -85,8 +87,14 @@ mod tests {
 
     #[test]
     fn oracle_one_plus_one() -> Result<(), Box<dyn std::error::Error + 'static>> {
-        let oracle = Oracle::default();
+        let start_time = Instant::now();
+        let oracle = Oracle::default()
+            .pull_image()?
+            .with_startup_timeout(Duration::from_secs(90));
+        let after_pull_time = start_time.elapsed().as_secs();
         let node = oracle.start()?;
+        let after_start_time = start_time.elapsed().as_secs();
+        panic!("Pull (seconds): {after_pull_time}, start (seconds): {after_start_time}");
 
         let connection_string = format!(
             "//{}:{}/FREEPDB1",
