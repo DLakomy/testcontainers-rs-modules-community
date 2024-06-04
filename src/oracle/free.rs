@@ -16,9 +16,23 @@ const DEFAULT_IMAGE_TAG: &str = "23-slim-faststart";
 ///
 /// # Example
 /// ```
+/// use std::time::Duration;
 /// use testcontainers_modules::{oracle::free::Oracle, testcontainers::runners::SyncRunner};
 ///
-/// let oracle = Oracle::default().start().unwrap();
+/// // On slower machines the image sometimes needs to be pulled before,
+/// // and there is more time needed than 60 seconds
+/// // (the default startup timeout; pull is not timed).
+///
+/// // On a faster machine this should suffice:
+/// // let oracle = Oracle::default().unwrap();
+///
+/// let oracle = Oracle::default()
+///     .pull_image()
+///     .unwrap()
+///     .with_startup_timeout(Duration::from_secs(75))
+///     .start()
+///     .unwrap();
+///
 /// let http_port = oracle.get_host_port_ipv4(1521).unwrap();
 ///
 /// // do something with the started Oracle instance..
@@ -78,7 +92,7 @@ impl Image for Oracle {
 
 #[cfg(test)]
 mod tests {
-    use std::time::{Duration, Instant};
+    use std::time::Duration;
 
     use super::*;
     use crate::testcontainers::runners::SyncRunner;
@@ -87,14 +101,11 @@ mod tests {
 
     #[test]
     fn oracle_one_plus_one() -> Result<(), Box<dyn std::error::Error + 'static>> {
-        let start_time = Instant::now();
         let oracle = Oracle::default()
             .pull_image()?
-            .with_startup_timeout(Duration::from_secs(90));
-        let after_pull_time = start_time.elapsed().as_secs();
+            .with_startup_timeout(Duration::from_secs(75));
+
         let node = oracle.start()?;
-        let after_start_time = start_time.elapsed().as_secs();
-        panic!("Pull (seconds): {after_pull_time}, start (seconds): {after_start_time}");
 
         let connection_string = format!(
             "//{}:{}/FREEPDB1",
